@@ -1,0 +1,460 @@
+{% extends "base.html" %}
+
+{% block title %}Manage {{ company.name }} - Virtual Queue System{% endblock %}
+
+{% block head %}
+<style>
+    .qr-code-container {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .qr-code {
+        max-width: 200px;
+        margin: 0 auto;
+    }
+    .queue-item {
+        transition: all 0.3s;
+    }
+    .queue-item.serving {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-left: 5px solid #198754;
+    }
+    .queue-item.waiting {
+        background-color: rgba(255, 193, 7, 0.1);
+        border-left: 5px solid #ffc107;
+    }
+    .queue-item.delayed {
+        background-color: rgba(220, 53, 69, 0.1);
+        border-left: 5px solid #dc3545;
+    }
+    .status-badge {
+        text-transform: capitalize;
+    }
+    .header-actions {
+        display: flex;
+        gap: 1rem;
+    }
+    .btn-icon {
+        margin-left: 0.5rem;
+    }
+    .btn-primary, .btn-secondary {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+    .btn-secondary {
+        background: #f3f4f6;
+        color: var(--text);
+    }
+    .btn-primary:hover, .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>{{ company.name }}</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+
+<div class="manage-header">
+    <div class="company-info">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Company Details</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ company.name }}</p>
+                <p><strong>Service Type:</strong> {{ company.service_type }}</p>
+                <p><strong>Company Code:</strong> {{ company.company_code }}</p>
+                <p><strong>Created:</strong> {{ company.created_at.strftime('%Y-%m-%d') }}</p>
+                <hr>
+                <h6>Queue Statistics</h6>
+                <p><strong>Total Served:</strong> {{ stats.total_served }}</p>
+                <p><strong>Total Delayed:</strong> {{ stats.total_delayed }}</p>
+                <p><strong>Average Wait Time:</strong> {{ (stats.avg_wait_time / 60)|round(1) }} minutes</p>
+                <a href="{{ url_for('export_history', company_id=company.id) }}" class="btn btn-outline-primary">Export History</a>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Customer QR Code</h5>
+            </div>
+            <div class="card-body">
+                <div class="qr-code-container">
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="img-fluid qr-code">
+                </div>
+                <p class="text-center">Scan this code to join the queue</p>
+                <p class="text-center">or use code: <strong>{{ company.company_code }}</strong></p>
+                <button class="btn btn-outline-primary w-100" id="print-qr">Print QR Code</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="header-actions">
+        <button class="btn btn-primary" onclick="window.location.href='/live_monitoring/{{ company.id }}'">
+            <span>Live Monitoring</span>
+            <div class="btn-icon">📹</div>
+        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='/crowd_prediction/{{ company.id }}'">
+            <span>Crowd Prediction</span>
+            <div class="btn-icon">📊</div>
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Cashiers/Service Points</h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="cashiersAccordion">
+                    {% for cashier in cashiers %}
+                    <div class="accordion-item mb-3 border">
+                        <h2 class="accordion-header" id="heading{{ cashier.id }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ cashier.id }}">
+                                <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                                    <span>Cashier #{{ cashier.cashier_number }}</span>
+                                    <span class="badge {% if cashier.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                        {% if cashier.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ cashier.id }}" class="accordion-collapse collapse" data-bs-parent="#cashiersAccordion">
+                            <div class="accordion-body">
+                                <div class="d-flex justify-content-between mb-3">
+                                    <button class="btn btn-sm {% if cashier.is_active %}btn-danger{% else %}btn-success{% endif %} toggle-cashier" data-cashier-id="{{ cashier.id }}">
+                                        {% if cashier.is_active %}Deactivate{% else %}Activate{% endif %}
+                                    </button>
+                                    <span class="badge bg-secondary" id="queue-count-{{ cashier.id }}">Loading...</span>
+                                </div>
+                                
+                                <div class="queue-container" id="queue-{{ cashier.id }}">
+                                    <div class="text-center">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Socket.io setup
+        const socket = io();
+        socket.on('connect', function() {
+            console.log('Connected to Socket.IO server');
+            socket.emit('join_company_room', { company_code: '{{ company.company_code }}' });
+        });
+        
+        // Print QR code
+        document.getElementById('print-qr').addEventListener('click', function() {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>QR Code - {{ company.name }}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; text-align: center; }
+                        .container { max-width: 400px; margin: 0 auto; padding: 20px; }
+                        h2 { margin-bottom: 5px; }
+                        p { margin-top: 5px; }
+                        img { max-width: 300px; margin: 20px 0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>{{ company.name }}</h2>
+                        <p>Scan to join the queue</p>
+                        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+                        <p>Or use code: <strong>{{ company.company_code }}</strong></p>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        });
+        
+        // Toggle cashier status
+        document.querySelectorAll('.toggle-cashier').forEach(button => {
+            button.addEventListener('click', function() {
+                const cashierId = this.getAttribute('data-cashier-id');
+                fetch(`/api/toggle_cashier/${cashierId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.is_active) {
+                            this.textContent = 'Deactivate';
+                            this.classList.remove('btn-success');
+                            this.classList.add('btn-danger');
+                            this.closest('.accordion-item').querySelector('.badge').textContent = 'Active';
+                            this.closest('.accordion-item').querySelector('.badge').classList.remove('bg-danger');
+                            this.closest('.accordion-item').querySelector('.badge').classList.add('bg-success');
+                        } else {
+                            this.textContent = 'Activate';
+                            this.classList.remove('btn-danger');
+                            this.classList.add('btn-success');
+                            this.closest('.accordion-item').querySelector('.badge').textContent = 'Inactive';
+                            this.closest('.accordion-item').querySelector('.badge').classList.remove('bg-success');
+                            this.closest('.accordion-item').querySelector('.badge').classList.add('bg-danger');
+                        }
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+        
+        // Load queue data for each cashier
+        const loadQueueData = (cashierId) => {
+            fetch(`/api/get_cashier_queue/${cashierId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const queueContainer = document.getElementById(`queue-${cashierId}`);
+                    const queueCount = document.getElementById(`queue-count-${cashierId}`);
+                    
+                    // Update queue count
+                    const activeCustomers = data.queue.filter(c => c.status !== 'served' && c.status !== 'removed').length;
+                    queueCount.textContent = `${activeCustomers} in queue`;
+                    
+                    // Clear loading spinner
+                    queueContainer.innerHTML = '';
+                    
+                    if (data.queue.length === 0) {
+                        queueContainer.innerHTML = '<p class="text-center">No customers in queue</p>';
+                        return;
+                    }
+                    
+                    // Create queue items
+                    data.queue.forEach(customer => {
+                        if (customer.status === 'served' || customer.status === 'removed') {
+                            return;
+                        }
+                        
+                        const statusClass = customer.status === 'serving' ? 'serving' : 
+                                         customer.status === 'waiting' ? 'waiting' : 'delayed';
+                        
+                        const statusBadgeClass = customer.status === 'serving' ? 'bg-success' : 
+                                             customer.status === 'waiting' ? 'bg-warning' : 'bg-danger';
+                        
+                        const estimatedWaitTime = Math.round(customer.estimated_wait_time / 60);
+                        
+                        const html = `
+                            <div class="card mb-2 queue-item ${statusClass}">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-1">OTP: ${customer.otp}</h5>
+                                            <p class="mb-0 text-muted">Position: ${customer.position} | Joined: ${customer.join_time}</p>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge ${statusBadgeClass} status-badge">${customer.status}</span>
+                                            ${customer.delays > 0 ? `<span class="badge bg-secondary ms-1">Delayed: ${customer.delays}</span>` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <small class="text-muted">Est. wait: ${estimatedWaitTime} min</small>
+                                        <div>
+                                            ${customer.status === 'serving' ? 
+                                            `<button class="btn btn-sm btn-success me-1 serve-btn" data-customer-id="${customer.id}" data-cashier-id="${cashierId}">Served</button>
+                                             <button class="btn btn-sm btn-warning delay-btn" data-customer-id="${customer.id}" data-cashier-id="${cashierId}">Delay</button>` : 
+                                             customer.status === 'waiting' ? 
+                                             `<button class="btn btn-sm btn-danger remove-btn" data-customer-id="${customer.id}" data-cashier-id="${cashierId}">Remove</button>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        queueContainer.innerHTML += html;
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+        };
+        
+        // Load initial queue data when accordion is opened
+        document.querySelectorAll('.accordion-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const cashierId = this.getAttribute('data-bs-target').replace('#collapse', '');
+                if (this.classList.contains('collapsed')) {
+                    // Accordion is being opened
+                    loadQueueData(cashierId);
+                }
+            });
+        });
+        
+        // Use event delegation for dynamically created buttons
+        document.addEventListener('click', function(event) {
+            // Serve button handling
+            if (event.target.classList.contains('serve-btn')) {
+                const customerId = event.target.getAttribute('data-customer-id');
+                const cashierId = event.target.getAttribute('data-cashier-id');
+                
+                // Disable button and show loading state
+                event.target.disabled = true;
+                const originalText = event.target.textContent;
+                event.target.textContent = 'Processing...';
+                
+                fetch(`/api/serve_customer/${cashierId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server error: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Serve response:', data);
+                    loadQueueData(cashierId);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error serving customer. Please try again.');
+                })
+                .finally(() => {
+                    // Re-enable button
+                    event.target.disabled = false;
+                    event.target.textContent = originalText;
+                });
+            }
+            
+            // Delay button handling
+            if (event.target.classList.contains('delay-btn')) {
+                const customerId = event.target.getAttribute('data-customer-id');
+                const cashierId = event.target.getAttribute('data-cashier-id');
+                
+                fetch(`/api/delay_customer/${customerId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Customer delayed successfully');
+                        loadQueueData(cashierId);
+                    } else {
+                        console.error('Error delaying customer:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+            
+            // Remove button handling
+            if (event.target.classList.contains('remove-btn')) {
+                const customerId = event.target.getAttribute('data-customer-id');
+                const cashierId = event.target.getAttribute('data-cashier-id');
+                
+                fetch(`/api/remove_customer/${customerId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Customer removed successfully');
+                        loadQueueData(cashierId);
+                    } else {
+                        console.error('Error removing customer:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        });
+        
+        // Socket events for real-time updates
+        socket.on('cashier_status_change', data => {
+            console.log('Cashier status changed:', data);
+            // Refresh all queues
+            document.querySelectorAll('.queue-container').forEach(container => {
+                const cashierId = container.id.replace('queue-', '');
+                loadQueueData(cashierId);
+            });
+        });
+        
+        socket.on('customer_turn', data => {
+            console.log('Customer turn:', data);
+            // Refresh all queues
+            document.querySelectorAll('.queue-container').forEach(container => {
+                const cashierId = container.id.replace('queue-', '');
+                loadQueueData(cashierId);
+            });
+        });
+        
+        socket.on('customer_delayed', data => {
+            console.log('Customer delayed:', data);
+            // Refresh all queues
+            document.querySelectorAll('.queue-container').forEach(container => {
+                const cashierId = container.id.replace('queue-', '');
+                loadQueueData(cashierId);
+            });
+        });
+        
+        socket.on('customer_removed', data => {
+            console.log('Customer removed:', data);
+            // Refresh all queues
+            document.querySelectorAll('.queue-container').forEach(container => {
+                const cashierId = container.id.replace('queue-', '');
+                loadQueueData(cashierId);
+            });
+        });
+        
+        socket.on('queue_updated', data => {
+            console.log('Queue positions updated:', data);
+            // If we have a specific cashier_id, only update that queue
+            if (data.cashier_id) {
+                loadQueueData(data.cashier_id);
+            } else {
+                // Otherwise refresh all queues
+                document.querySelectorAll('.queue-container').forEach(container => {
+                    const cashierId = container.id.replace('queue-', '');
+                    loadQueueData(cashierId);
+                });
+            }
+        });
+        
+        // Auto-refresh queues every 30 seconds
+        setInterval(() => {
+            document.querySelectorAll('.accordion-collapse.show').forEach(container => {
+                const cashierId = container.id.replace('collapse', '');
+                loadQueueData(cashierId);
+            });
+        }, 30000);
+    });
+</script>
+{% endblock %} 

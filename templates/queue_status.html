@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Queue Status | {{ company.name }}{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/queue_status.css">
+{% endblock %}
+
+{% block content %}
+<canvas id="particle-canvas"></canvas>
+
+<div class="app-container">
+    <div class="header">
+        <div class="cashier-info" title="Cashier Information"></div>
+        <div class="header-content">
+            <div class="header-title">
+                <div class="header-icon"></div>
+                <span>Queue Status</span>
+            </div>
+            <div class="header-subtitle">{{ company.name }}</div>
+        </div>
+        <button class="toggle-button" aria-label="Toggle dark mode" onclick="toggleTheme()">
+            <span class="toggle-icon">🌙</span>
+        </button>
+    </div>
+
+    <div class="ticket-section">
+        <div class="ticket-number" aria-live="polite">{{ customer.otp }}</div>
+        <div class="ticket-label">Your Queue Number</div>
+
+        <div class="cashier-badge">
+            Cashier #{{ cashier.cashier_number }}
+            {% if customer.status == 'serving' %}
+            <div class="serving-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="status-card" id="status-container">
+            <div class="status-title">Position</div>
+            <div class="status-value" id="position">{{ customer.position }}</div>
+            <div class="status-time">
+                Estimated wait: <span id="wait-time">{{ (estimated_wait_seconds / 60)|round|int }} min</span>
+            </div>
+            <div class="last-update">Last update: <span id="last-update-time">now</span></div>
+        </div>
+
+        {% if customer.status == 'serving' %}
+        <div class="alert alert-success fade-in">
+            <div class="alert-icon">🎉</div>
+            <div class="alert-content">
+                <div class="alert-title">It's Your Turn!</div>
+                <p class="alert-text">Please proceed to Cashier #{{ cashier.cashier_number }}</p>
+            </div>
+        </div>
+        {% elif customer.status == 'served' %}
+        <div class="alert alert-success fade-in">
+            <div class="alert-icon">✅</div>
+            <div class="alert-content">
+                <div class="alert-title">You have been served</div>
+                <p class="alert-text">Thank you for using our service</p>
+            </div>
+        </div>
+        {% elif customer.status == 'removed' %}
+        <div class="alert alert-success fade-in">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+                <div class="alert-title">You have been removed from the queue</div>
+                <p class="alert-text">Please contact customer service for assistance</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="progress-tracker">
+            <div class="progress-line"></div>
+            <div class="progress-line-fill {% if customer.status == 'waiting' %}width-33{% elif customer.status == 'serving' %}width-66{% elif customer.status == 'served' %}width-100{% else %}width-33{% endif %}"></div>
+            
+            <div class="progress-step {% if customer.status in ['waiting', 'serving', 'served'] %}active completed{% endif %}">
+                <div class="step-icon">📋</div>
+                <div class="step-label">Joined</div>
+            </div>
+            
+            <div class="progress-step {% if customer.status in ['serving', 'served'] %}active completed{% endif %}">
+                <div class="step-icon">🎧</div>
+                <div class="step-label">Serving</div>
+            </div>
+            
+            <div class="progress-step {% if customer.status == 'served' %}active completed{% endif %}">
+                <div class="step-icon">✅</div>
+                <div class="step-label">Complete</div>
+            </div>
+        </div>
+
+        <div class="wait-time-section">
+            <div class="wait-time-pill">
+                Joined at: {{ customer.join_time.strftime('%H:%M, %d %b %Y') }}
+            </div>
+            <div class="refresh-button" onclick="checkStatus()">
+                Refresh
+            </div>
+            <div class="sound-toggle" onclick="toggleSound()">
+                Sound On
+            </div>
+            {% if customer.status == 'served' or customer.status == 'removed' %}
+            <div class="new-queue-button" onclick="joinNewQueue()">
+                New Queue
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="notification-panel">
+            <h3>Notifications</h3>
+            <div id="notification-list">
+                <div class="notification-item">You joined the queue with ticket {{ customer.otp }}.</div>
+                {% if customer.status == 'serving' %}
+                <div class="notification-item">Your turn has arrived! Please proceed to Cashier #{{ cashier.cashier_number }}.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="update-indicator">
+            Updates automatically every 10 seconds - no need to refresh
+        </div>
+    </div>
+</div>
+
+<div class="brand-footer">
+    <div class="brand-logo">{{ company.name[0] }}</div>
+    {{ company.name }}
+</div>
+
+<canvas id="confetti-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></canvas>
+
+<!-- Hidden inputs for JavaScript -->
+<input type="hidden" id="otp-value" value="{{ customer.otp }}">
+<input type="hidden" id="company-code" value="{{ company.company_code }}">
+<input type="hidden" id="customer-status" value="{{ customer.status }}">
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script src="/static/js/queue_status.js"></script>
+{% endblock %}

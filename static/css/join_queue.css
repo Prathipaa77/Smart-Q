@@ -1,0 +1,59 @@
+.card {
+    margin-top: 30px;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    padding: 1.2rem;
+}
+
+.card-header h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+.btn-lg {
+    padding: 12px 30px;
+    font-size: 18px;
+    border-radius: 8px;
+}
+
+.display-6 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #0d6efd;
+}
+
+.alert-success {
+    border-left: 5px solid #198754;
+}
+
+#join-queue-btn {
+    transition: all 0.3s ease;
+}
+
+#join-queue-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
+}
+
+#join-queue-btn:disabled {
+    transform: none;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+#result-container {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+} 

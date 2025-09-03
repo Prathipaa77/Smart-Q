@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Virtual Queue System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Admin Dashboard</h1>
+    {% if test_mode or no_redirect %}
+        <button class="btn btn-primary" disabled>Create New Company</button>
+    {% else %}
+        <a href="{{ url_for('create_company') }}" class="btn btn-primary">Create New Company</a>
+    {% endif %}
+</div>
+
+{% if companies %}
+<div class="row">
+    {% for company in companies %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ company.name }}</h5>
+                <p class="card-text text-muted">{{ company.service_type }}</p>
+                <p><strong>Code:</strong> {{ company.company_code }}</p>
+                <p><strong>Created:</strong> {{ company.created_at.strftime('%Y-%m-%d') }}</p>
+                <p><strong>Cashiers:</strong> {{ company.cashiers|length }}</p>
+            </div>
+            <div class="card-footer bg-white border-top-0">
+                {% if test_mode or no_redirect %}
+                    <button class="btn btn-primary w-100" disabled>Manage</button>
+                {% else %}
+                    <a href="{{ url_for('manage_company', company_id=company.id) }}" class="btn btn-primary w-100">Manage</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <p>You don't have any companies yet. Click the "Create New Company" button to get started.</p>
+</div>
+{% endif %}
+{% endblock %} 

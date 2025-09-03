@@ -1,0 +1,136 @@
+/* Main styles for Virtual Queue System */
+
+body {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card {
+    border-radius: 0.5rem;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    border-top-left-radius: 0.5rem !important;
+    border-top-right-radius: 0.5rem !important;
+}
+
+.btn {
+    border-radius: 0.3rem;
+    padding: 0.5rem 1.5rem;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.alert {
+    border-radius: 0.3rem;
+    border: none;
+}
+
+.progress {
+    height: 1rem;
+    border-radius: 0.5rem;
+}
+
+/* Status colors */
+.status-serving {
+    color: #198754;
+}
+
+.status-waiting {
+    color: #ffc107;
+}
+
+.status-delayed {
+    color: #fd7e14;
+}
+
+.status-removed {
+    color: #dc3545;
+}
+
+/* Queue item cards */
+.queue-container {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* QR code styling */
+.qr-code {
+    padding: 1rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .accordion-button {
+        padding: 0.5rem 1rem;
+    }
+}
+
+/* Animations */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.serving-now {
+    animation: pulse 1.5s infinite;
+}
+
+/* Print styles */
+@media print {
+    body {
+        background-color: white;
+    }
+    
+    .navbar, .footer, .btn {
+        display: none;
+    }
+    
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+} 

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Live Monitoring - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="monitoring-header">
+        <h1>Live Monitoring - {{ company.name }}</h1>
+        <a href="{{ url_for('manage_company', company_id=company.id) }}" class="btn btn-outline">
+            <span>Back to Management</span>
+            <div class="btn-icon">←</div>
+        </a>
+    </div>
+
+    <div class="video-feed">
+        <img src="{{ url_for('video_feed') }}" alt="Video Feed" width="640">
+    </div>
+    <div class="stats-box">
+        <p>Total People: <span id="person-count">{{ person_count }}</span></p>
+        <p>Threshold: <span id="threshold">{{ threshold }}</span></p>
+        <p id="crowd-status" class="{% if crowd_status == 'Crowd Detected!' %}crowd-status-crowded{% else %}crowd-status-no-crowd{% endif %}">
+            {{ crowd_status }}
+        </p>
+    </div>
+    <div class="heatmap">
+        <h2>Heatmap</h2>
+        <img id="heatmap-img" src="data:image/png;base64,{{ heatmap_base64 }}" alt="Heatmap" width="640">
+    </div>
+</div>
+
+<div class="alert-container" id="alert-container"></div>
+
+<audio id="alert-sound" preload="auto">
+    <source src="https://assets.coderrocketfuel.com/pomodoro-times-up.mp3" type="audio/mp3">
+</audio>
+
+<style>
+/* Copy all the styles from your provided index.html CSS here */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.monitoring-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+/* Add all other styles from your index.html */
+</style>
+
+<script>
+// Copy all the JavaScript from your provided index.html here
+</script>
+{% endblock %} 

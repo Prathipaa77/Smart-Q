@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Join Queue - {{ company.name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/join_queue.css">
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Join Queue for {{ company.name }}</h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <h5>{{ company.service_type }}</h5>
+                    {% if cashiers|length > 0 %}
+                        <p class="text-success">Queue is open with {{ cashiers|length }} active cashiers</p>
+                    {% else %}
+                        <p class="text-danger">Queue is currently closed. Please try again later.</p>
+                    {% endif %}
+                </div>
+                
+                {% if cashiers|length > 0 %}
+                <div class="text-center mb-4" id="joining-container">
+                    <p>Click the button below to join the queue.</p>
+                    <p>You will be assigned to the cashier with the shortest queue.</p>
+                    <button id="join-queue-btn" class="btn btn-primary btn-lg">Join Queue</button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden inputs for JavaScript -->
+<input type="hidden" id="company-code" value="{{ company.company_code }}">
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/join_queue.js"></script>
+{% endblock %} 
